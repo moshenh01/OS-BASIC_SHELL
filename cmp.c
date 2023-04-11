@@ -15,8 +15,8 @@ int main(int argc, char *argv[]) {
    
     
    // printf("argv[0] = %s    argv[1] = %s    argv[2] = %s        argc = %d \n" , argv[0], argv[1], argv[2], argc);  
-    FILE *fp1 = fopen(argv[1], "r");
-    FILE *fp2 = fopen(argv[2], "r");
+    FILE *fp1 = fopen(argv[1], "rb");
+    FILE *fp2 = fopen(argv[2], "rb");
     if (fp1 == NULL || fp2 == NULL) {
         printf("Error: cannot open file \n");
         exit(1);

@@ -18,8 +18,8 @@
 int main(int argc, char *argv[]){
   
     //printf("argv[0] = %s    argv[1] = %s    argv[2] = %s        argc = %d \n" , argv[0], argv[1], argv[2], argc);
-    FILE *fp1 = fopen(argv[1], "r");
-    FILE *fp2 = fopen(argv[2], "r");
+    FILE *fp1 = fopen(argv[1], "rb");
+    FILE *fp2 = fopen(argv[2], "rb");
     if (fp1 == NULL) {
         printf("Error: cannot open file \n");
         exit(1);
@@ -53,7 +53,7 @@ int main(int argc, char *argv[]){
     }
     //if argv[2] == -f overwrite the target file
     else if (strcmp(argv[3], "-f") == 0) {
-        fp2 = fopen(argv[2], "w");
+        fp2 = fopen(argv[2], "wb");
         if (fp2 == NULL) {
             printf("general failure \n");
             exit(1);
@@ -74,7 +74,7 @@ int main(int argc, char *argv[]){
             //printf("target file exist \n");
             exit(1);
         }
-        fp2 = fopen(argv[2], "w");
+        fp2 = fopen(argv[2], "wb");
         if (fp2 == NULL) {
             //printf("general failure \n");
             exit(1);
