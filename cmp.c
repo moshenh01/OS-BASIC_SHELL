@@ -49,6 +49,7 @@ int main(int argc, char *argv[]) {
             }
         }
         printf("equal \n");
+       
         exit(0);
     }
     
@@ -99,9 +100,13 @@ int main(int argc, char *argv[]) {
             }
             
         }
-        printf("Files are equal \n");
+        //printf("Files are equal \n");
         exit(0);
     }
+   
+ 
+   
+    
 
 
 }

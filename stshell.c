@@ -10,11 +10,13 @@
 
 pid_t child_pid = 0;
 
-void execute_command(char **command, char *input_file, char *output_file, int append)
+void execute_command(char **command, char *input_file, char *output_file, int append, int pipefd[2])
 {
 	pid_t pid;
 	int status;
-
+	// printf("1)Executing command: %s %s %s %d %d  \n", command[0], command[1], command[2], pipefd[0], pipefd[1]);
+	// printf("1)Executing command: %s %s %s %s %s %d %d  \n", command[0], command[1], command[2],command[3],command[4], pipefd[0], pipefd[1]);
+	
 	pid = fork();
 	child_pid = pid;
 
@@ -26,6 +28,20 @@ void execute_command(char **command, char *input_file, char *output_file, int ap
 	else if (pid == 0)
 	{
 		// Child process
+
+		//use pipe if necessary
+		if (pipefd[0] != -1 && pipefd[1] != -1)
+		{
+
+			
+			close(pipefd[0]);
+			if (dup2(pipefd[1], STDOUT_FILENO) == -1)
+			{
+				perror("dup2 failed");
+				exit(EXIT_FAILURE);
+			}
+			close(pipefd[1]);
+		}
 
 		// Redirect input if necessary
 		if (input_file != NULL)
@@ -61,6 +77,7 @@ void execute_command(char **command, char *input_file, char *output_file, int ap
 		}
 
 		// Execute command
+		
 		if (execvp(command[0], command) == -1)
 		{
 			perror("execvp failed");
@@ -75,6 +92,20 @@ void execute_command(char **command, char *input_file, char *output_file, int ap
 	else
 	{
 		// Parent process
+		
+		//use pipe if necessary
+		if (pipefd[0] != -1 && pipefd[1] != -1)
+		{
+			close(pipefd[1]);
+			if (dup2(pipefd[0], STDIN_FILENO) == -1)
+			{
+				perror("dup2 failed");
+				exit(EXIT_FAILURE);
+			}
+			close(pipefd[0]);
+		}
+
+		
 		if (waitpid(pid, &status, 0) == -1)
 		{
 			perror("waitpid failed");
@@ -83,11 +114,11 @@ void execute_command(char **command, char *input_file, char *output_file, int ap
 
 		if (WIFEXITED(status))
 		{
-			printf("%s+ returned %d\n",command[0], WEXITSTATUS(status));
+			printf("%s+ returned %d\n", command[0], WEXITSTATUS(status));
 		}
 		else
 		{
-			printf("%s+ exited abnormally\n" ,command[0]);
+			printf("%s+ exited abnormally\n", command[0]);
 		}
 	}
 }
@@ -108,16 +139,42 @@ void sig_hendler(int signum)
 		// do something
 	}
 }
+void print_arry_arg(int arry_arg[], int num_commands)
+{
+	for (int i = 0; i < num_commands; i++)
+	{
+		printf("arry_arg[%d] = %d \n", i, arry_arg[i]);
+	}
+}
+
+void print_commands(char *commands[10][10], int num_commands, int arry_arg[])
+{
+	for (int i = 0; i < num_commands; i++)
+	{
+		printf("commands[%d] = ", i);
+		for (int j = 0; j < arry_arg[i] ; j++)
+		{
+			printf("%s ", commands[i][j]);
+		}
+		printf("\n");
+	}
+}
 
 int main()
 {
-	int i;
-	char *argv[10];
-	char command[1024];
+
+	char input_stream[1024];
+	char *commands[10][10];
 	char *token;
 	char *input_file = NULL;
-    char *output_file = NULL;
-
+	char *output_file = NULL;
+	int append = 0;		  // 0: overwrite, 1: append
+	int num_commands = 0; // number of commands.
+	int num_args = 0;	  // number of arguments for the command.
+	int pipefd[2];		  // file descriptors for pipe
+	int orig_stdin = dup(STDIN_FILENO); // save original stdin file descriptor
+    int orig_stdout = dup(STDOUT_FILENO); // save original stdout file descriptor
+	int arry_arg[10]; // number of arguments for each command
 	// ignore ctrl+c
 	if (signal(SIGINT, sig_hendler) == SIG_ERR)
 	{
@@ -128,75 +185,163 @@ int main()
 	while (1)
 	{
 		printf("myshell> ");
-		fgets(command, 1024, stdin);
-		command[strlen(command) - 1] = '\0'; // replace \n with \0
+		fgets(input_stream, 1024, stdin);
+		input_stream[strlen(input_stream) - 1] = '\0'; // replace \n with \0
+		
+
 
 		/* parse command line */
-		i = 0;
-		token = strtok(command, " ");
+		// Reset variables for new command line input.
+		num_commands = 0;
+		num_args = 0;
+		token = strtok(input_stream, " ");
 		while (token != NULL)
 		{
-			argv[i] = token;
+			if (strcmp(token, ">") == 0)
+			{
+				// Output redirection, catch the next token as output file
+				token = strtok(NULL, " ");
+				output_file = token;
+				token = strtok(NULL, " ");
+				append = 0;
+			}
+			else if (strcmp(token, ">>") == 0)
+			{
+				// Output redirection, catch the next token as output file
+				token = strtok(NULL, " ");
+				output_file = token;
+				token = strtok(NULL, " ");
+				append = 1;
+			}
+			else if (strcmp(token, "<") == 0)
+			{
+				// Input redirection, catch the next token as input file
+				token = strtok(NULL, " ");
+				input_file = token;
+				token = strtok(NULL, " ");
+			}
+			else if (strcmp(token, "|") == 0)
+			{
+				// Pipe, from new its a new command
+				arry_arg[num_commands-1] = num_args;
+				commands[num_commands - 1][num_args] = NULL; // NULL terminate the last command and argument
+				
+				num_args = 0;
+				token = strtok(NULL, " ");
+				continue;
+			}
+			else
+			{
+				// Command or argument
+				if (num_args == 0)
+				{
+					// Command
+					commands[num_commands][num_args++] = token;
+					num_commands++;
+				}
+				else
+				{
+					// Argument
+					commands[num_commands - 1][num_args++] = token;
+				}
+			}
 			token = strtok(NULL, " ");
-			i++;
 		}
-		argv[i] = NULL; // last element of argv must be NULL for execvp to work properly.
+		arry_arg[num_commands-1] = num_args;
 
+		commands[num_commands - 1][num_args] = NULL; // NULL terminate the last command and argument
+		//print_arry_arg(arry_arg, num_commands);
+		//print_commands(commands, num_commands, arry_arg);
+		
 		/* Is command empty or ..*/
-		if (argv[0] == NULL || strcmp(argv[0], "") == 0 || strcmp(argv[0], "\n") == 0)
+		if (commands[0] == NULL || commands[0][0] == NULL || strcmp(commands[0][0], "") == 0 || strcmp(commands[0][0], "\n") == 0)
 			continue;
 
-		if (strcmp(argv[0], "exit") == 0)
+		if (strcmp(commands[0][0], "exit") == 0)
 			exit(0);
-		
 
-		
-		// execute cmp tool if user types "cmp"
-		if (strcmp(argv[0], "cmp") == 0)
+		int i;
+		for (i = 0; i < num_commands; i++)
 		{
-			if (i > 4 || i < 3)
-			{
-				printf("Usage: cmp file1 file2 -i/-v\n");
-				continue;
-			}
-			argv[0] = "./cmp";
-			execute_command(argv, NULL, NULL, 0);
 			
-		}
-		// execute copy tool if user types "copy"
-		if (strcmp(argv[0], "copy") == 0)
-		{
-			if (i > 4 || i < 3)
+			if (i < num_commands - 1)
 			{
-				printf("Usage: copy file1 file2 -v\n");
-				continue;
+				// Not the last command, create pipe
+				if (pipe(pipefd) == -1)
+				{
+					perror("pipe failed");
+					exit(EXIT_FAILURE);
+				}
 			}
-			argv[0] = "./copy";
-			execute_command(argv, NULL, NULL, 0);
-		}
+			else
+			{
+				// Last command, no pipe
+				pipefd[0] = -1;
+				pipefd[1] = -1;
+				
+			}
+			
+			// execute cmp tool if user types "cmp"
+			if (strcmp(commands[i][0], "cmp") == 0)
+			{
+
+				if (arry_arg[i] > 4 || arry_arg[i]  < 3)
+				{
+					printf("Usage: cmp file1 file2 -i/-v\n");
+					continue;
+				}
+				commands[i][0] = "./cmp";
+				execute_command(commands[i], input_file, output_file, append, pipefd);
+			}
+			// execute copy tool if user types "copy"
+			else if (strcmp(commands[i][0], "copy") == 0)
+			{
+				if (arry_arg[i]  > 4 || arry_arg[i]  < 3)
+				{
+					printf("Usage: copy file1 file2 -v\n");
+					continue;
+				}
+				commands[i][0] = "./copy";
+				execute_command(commands[i], input_file, output_file, append, pipefd);
+			}
+
+
 		
-		if (strcmp(argv[0], "encode") == 0)
-		{
-			if (i != 3)
+		
+
+			else if (strcmp(commands[i][0], "encode") == 0)
 			{
-				printf("Usage: encode <codec> <message>\n");
-				continue;
+				if (arry_arg[i] > 3 || arry_arg[i]  < 2 )
+				{
+					printf("Usage: encode <codec> <message>\n");
+					continue;
+				}
+
+				commands[i][0] = "./encode";
+				execute_command(commands[i], input_file, output_file, append, pipefd);
+			}
+			else if (strcmp(commands[i][0], "decode") == 0)
+			{
+				if (arry_arg[i] > 3 || arry_arg[i]  < 2)
+				{
+					printf("Usage: decode <codec> <message>\n");
+					continue;
+				}
+
+				commands[i][0] = "./decode";
+				execute_command(commands[i], input_file, output_file, append, pipefd);
+			}
+			else
+			{
+				// Execute command
+				//printf("Executing command: %s\n", commands[i][0]);
+				execute_command(commands[i], input_file, output_file, append, pipefd);
+
 			}
 
-			argv[0] = "./encode";
-			execute_command(argv, NULL, NULL, 0);
-
 		}
-		if (strcmp(argv[0], "decode") == 0)
-		{
-			if (i != 3)
-			{
-				printf("Usage: decode <codec> <message>\n");
-				continue;
-			}
 
-			argv[0] = "./decode";
-			execute_command(argv, NULL, NULL, 0);
-		}
+		dup2(orig_stdin, STDIN_FILENO); // reset stdin to its original state
+    	dup2(orig_stdout, STDOUT_FILENO); // reset stdout to its original state
 	}
 }

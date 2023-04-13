@@ -9,6 +9,12 @@ int main(int argc, char *argv[]) {
     char *codec = argv[1];
     char *message = argv[2];
    
+    if(argc == 2){
+      message = malloc(100);
+      fgets(message, 100, stdin);
+      message[strlen(message) - 1] = '\0';
+    }
+   
     
     
     
@@ -51,6 +57,8 @@ int main(int argc, char *argv[]) {
     }
 
     printf("%s\n", message);
-
+    if(argc == 2)
+      free(message);
+    
   return 0;
 }

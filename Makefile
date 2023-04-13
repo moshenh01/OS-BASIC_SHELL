@@ -39,7 +39,8 @@ stshell.o: stshell.c
 
 
 clean:
-	rm -f *.o cmp copy shell new.txt codecA codecB libcodecA.so libcodecB.so encode decode
+	rm -f *.o cmp copy shell new.txt codecA codecB libcodecA.so libcodecB.so encode decode *.txt
+	
 
 
 

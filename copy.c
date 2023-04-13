@@ -16,6 +16,7 @@
 //"usage copy <file1> <file2> -v"
 
 int main(int argc, char *argv[]){
+    
   
     //printf("argv[0] = %s    argv[1] = %s    argv[2] = %s        argc = %d \n" , argv[0], argv[1], argv[2], argc);
     FILE *fp1 = fopen(argv[1], "rb");
@@ -48,7 +49,7 @@ int main(int argc, char *argv[]){
             }
             fputc(c1, fp2);
         }
-        printf("success \n");
+        printf("success\n");
         exit(0);
     }
     //if argv[2] == -f overwrite the target file
@@ -90,7 +91,9 @@ int main(int argc, char *argv[]){
         exit(0);
     
     }
-     
+    
+    
+    return 0;
 
 
 }
