@@ -7,8 +7,18 @@
 #include "unistd.h"
 #include <string.h>
 #include <signal.h>
+#include <unistd.h>
+#include <termios.h>
+#include <ctype.h>
+#include <readline/readline.h>
+#include <readline/history.h>
 
 pid_t child_pid = 0;
+char *history[100];
+int history_length = 0;
+int current_index = 0;
+int history_index = 0;
+int history_flag = 0;
 
 void execute_command(char **command, char *input_file, char *output_file, int append, int pipefd[2])
 {
@@ -28,7 +38,7 @@ void execute_command(char **command, char *input_file, char *output_file, int ap
 	else if (pid == 0)
 	{
 		// Child process
-
+		signal(SIGINT, SIG_DFL);
 		//use pipe if necessary
 		if (pipefd[0] != -1 && pipefd[1] != -1)
 		{
@@ -129,10 +139,10 @@ void sig_hendler(int signum)
 	{
 		// printf("ignore ctrl+c \n");
 		// ignore ctrl+c for the parent process
-		if (child_pid != 0)
-		{
-			kill(child_pid, SIGINT);
-		}
+		// if (child_pid != 0)
+		// {
+		// 	kill(child_pid, SIGINT);
+		// }
 	}
 	if (signum == SIGUSR1)
 	{
@@ -160,6 +170,57 @@ void print_commands(char *commands[10][10], int num_commands, int arry_arg[])
 	}
 }
 
+void add_command_to_history(char *commands[10][10], int num_commands, int arry_arg[])
+{
+	if(commands[0][0] == NULL || commands[0] == NULL || strcmp(commands[0][0], "") == 0)
+		return;
+
+	char *command = (char *)calloc(1024, sizeof(char));
+	for (int i = 0; i < num_commands; i++)
+	{
+		for (int j = 0; j < arry_arg[i]; j++)
+		{	
+
+			strcat(command, commands[i][j]);
+			strcat(command, " ");
+		}
+		if(i != num_commands - 1)
+			strcat(command, "| ");
+	}
+	strcat(command, "\0");
+	history[history_index] = (char *)malloc(strlen(command) + 1);
+	//printf("command = %s \n", command);
+	strcpy(history[history_index], command);
+	history_index = (history_index +1)%100;
+
+	if(history_index == 100)
+		history_flag = 1;
+
+	if(history_flag == 1)
+		history_length = 100;
+	else
+		history_length = history_index;
+	
+	free(command);
+
+}
+void free_history()
+{
+	for (int i = 0; i < history_length; i++)
+	{
+		free(history[i]);
+	}
+}
+
+void print_history()
+{
+	for (int i = 0; i < history_index; i++)
+	{
+		printf("%d: %s\n", i, history[i]);
+	}
+}
+
+
 int main()
 {
 
@@ -175,12 +236,15 @@ int main()
 	int orig_stdin = dup(STDIN_FILENO); // save original stdin file descriptor
     int orig_stdout = dup(STDOUT_FILENO); // save original stdout file descriptor
 	int arry_arg[10]; // number of arguments for each command
+	
 	// ignore ctrl+c
-	if (signal(SIGINT, sig_hendler) == SIG_ERR)
+	if (signal(SIGINT, SIG_IGN) == SIG_ERR)
 	{
 		printf("Error: %s\n", strerror(errno));
 		exit(1);
 	}
+
+ 
 
 	while (1)
 	{
@@ -188,8 +252,7 @@ int main()
 		fgets(input_stream, 1024, stdin);
 		input_stream[strlen(input_stream) - 1] = '\0'; // replace \n with \0
 		
-
-
+		
 		/* parse command line */
 		// Reset variables for new command line input.
 		num_commands = 0;
@@ -252,13 +315,16 @@ int main()
 		commands[num_commands - 1][num_args] = NULL; // NULL terminate the last command and argument
 		//print_arry_arg(arry_arg, num_commands);
 		//print_commands(commands, num_commands, arry_arg);
+		add_command_to_history(commands, num_commands, arry_arg);
 		
 		/* Is command empty or ..*/
 		if (commands[0] == NULL || commands[0][0] == NULL || strcmp(commands[0][0], "") == 0 || strcmp(commands[0][0], "\n") == 0)
 			continue;
 
-		if (strcmp(commands[0][0], "exit") == 0)
+		if (strcmp(commands[0][0], "exit") == 0){
+			free_history();
 			exit(0);
+		}
 
 		int i;
 		for (i = 0; i < num_commands; i++)
@@ -331,6 +397,17 @@ int main()
 				commands[i][0] = "./decode";
 				execute_command(commands[i], input_file, output_file, append, pipefd);
 			}
+			else if(strcmp(commands[i][0] ,"history") == 0){
+				if (arry_arg[i] > 1)
+				{
+					printf("Usage: history\n");
+					continue;
+				}
+				else
+				{
+					print_history();
+				}
+			}
 			else
 			{
 				// Execute command
@@ -340,8 +417,18 @@ int main()
 			}
 
 		}
+		//clean up commands
+		for (i = 0; i < num_commands; i++)
+		{
+			int j;
+			for (j = 0; j < arry_arg[i]; j++)
+			{
+				commands[i][j] = NULL;
+			}
+		}
 
 		dup2(orig_stdin, STDIN_FILENO); // reset stdin to its original state
     	dup2(orig_stdout, STDOUT_FILENO); // reset stdout to its original state
+		
 	}
 }

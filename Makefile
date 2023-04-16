@@ -7,7 +7,7 @@ LDFLAGS =
 all: cmp copy shell codecA codecB encode decode 
 
 shell: stshell.o
-	$(CC) $(FLAGS) stshell.o -o shell
+	$(CC) $(FLAGS) stshell.o -o shell -lreadline
 
 encode: encode.c
 	$(CC) $(FLAGS) -o $@ $^ 

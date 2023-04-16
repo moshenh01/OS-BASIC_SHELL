@@ -13,8 +13,8 @@
 // The toll will support -i flag, that mean “ignore case” so “AAA” and “aaa” meaning equals
 int main(int argc, char *argv[]) {
    
-    
-   // printf("argv[0] = %s    argv[1] = %s    argv[2] = %s        argc = %d \n" , argv[0], argv[1], argv[2], argc);  
+    //sleep(10);
+   //printf("argv[0] = %s    argv[1] = %s    argv[2] = %s        argc = %d \n" , argv[0], argv[1], argv[2], argc);  
     FILE *fp1 = fopen(argv[1], "rb");
     FILE *fp2 = fopen(argv[2], "rb");
     if (fp1 == NULL || fp2 == NULL) {

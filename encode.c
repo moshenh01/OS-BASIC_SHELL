@@ -2,13 +2,13 @@
 #include <stdlib.h>
 #include <string.h>
 #include <dlfcn.h>
+#include <unistd.h>
 #include "codec.h"
 
 int main(int argc, char *argv[]) {
     
     char *codec = argv[1];
     char *message = argv[2];
-   
     if(argc == 2){
       message = malloc(100);
       fgets(message, 100, stdin);
@@ -58,7 +58,7 @@ int main(int argc, char *argv[]) {
 
     printf("%s\n", message);
     if(argc == 2)
-      free(message);
+    free(message);
     
   return 0;
 }
