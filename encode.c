@@ -7,6 +7,10 @@
 
 int main(int argc, char *argv[]) {
     
+    if (argc < 2 || argc > 3) {
+      printf("Usage: decode codec [message] \n");
+      exit(1);
+    }
     char *codec = argv[1];
     char *message = argv[2];
     if(argc == 2){

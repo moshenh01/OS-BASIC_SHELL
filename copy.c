@@ -17,6 +17,13 @@
 
 int main(int argc, char *argv[]){
     
+    if (argc < 3 || argc > 5)
+    {
+        invalid:
+        printf("Usage: copy <file1> <file2> -v \n");
+        exit(1);
+    }
+   
   
     //printf("argv[0] = %s    argv[1] = %s    argv[2] = %s        argc = %d \n" , argv[0], argv[1], argv[2], argc);
     FILE *fp1 = fopen(argv[1], "rb");
@@ -25,13 +32,30 @@ int main(int argc, char *argv[]){
         printf("Error: cannot open file \n");
         exit(1);
     }
-    if (argc == 3)
-    {
-        goto end;
+ 
+    if(argv[3] == NULL){
+        if (fp2 != NULL) {
+            //printf("target file exist \n");
+            exit(1);
+        }
+        fp2 = fopen(argv[2], "wb");
+        if (fp2 == NULL) {
+            //printf("general failure \n");
+            exit(1);
+        }
+        int c1;
+        while (1) {
+            c1 = fgetc(fp1);
+            if (c1 == EOF) {
+                break;
+            }
+            fputc(c1, fp2);
+        }
+        exit(0);
     }
     
     //if argv[2] == -v print "success" or "target file exist" or "general failure"
-    if (strcmp(argv[3], "-v") == 0) {
+    else if ((strcmp(argv[3], "-v") == 0) && (argv[4] == NULL))  {
         if(fp2 != NULL) {
             printf("target file exist \n");
             exit(1);
@@ -53,28 +77,7 @@ int main(int argc, char *argv[]){
         exit(0);
     }
     //if argv[2] == -f overwrite the target file
-    else if (strcmp(argv[3], "-f") == 0) {
-        fp2 = fopen(argv[2], "wb");
-        if (fp2 == NULL) {
-            printf("general failure \n");
-            exit(1);
-        }
-        int c1;
-        while (1) {
-            c1 = fgetc(fp1);
-            if (c1 == EOF) {
-                break;
-            }
-            fputc(c1, fp2);
-        }
-        exit(0);
-    }
-    else {
-        end:
-        if (fp2 != NULL) {
-            //printf("target file exist \n");
-            exit(1);
-        }
+    else if ((strcmp(argv[3], "-f") == 0) && (argv[4] == NULL)){
         fp2 = fopen(argv[2], "wb");
         if (fp2 == NULL) {
             //printf("general failure \n");
@@ -89,7 +92,47 @@ int main(int argc, char *argv[]){
             fputc(c1, fp2);
         }
         exit(0);
-    
+    }
+    else if(( (strcmp(argv[3], "-v") == 0) && (strcmp(argv[4], "-f") == 0) ) ||
+            ( (strcmp(argv[3], "-f") == 0) && (strcmp(argv[4], "-v") == 0) )){
+        fp2 = fopen(argv[2], "wb");
+        if (fp2 == NULL) {
+            printf("general failure \n");
+            exit(1);
+        }
+        int c1;
+        while (1) {
+            c1 = fgetc(fp1);
+            if (c1 == EOF) {
+                break;
+            }
+            fputc(c1, fp2);
+        }
+        printf("success\n");
+        exit(0);
+    }
+    else if((strcmp(argv[3], "-f") == 0) && (strcmp(argv[4], "-v") == 0)){
+        fp2 = fopen(argv[2], "wb");
+        if (fp2 == NULL) {
+            printf("general failure \n");
+            exit(1);
+        }
+        int c1;
+        while (1) {
+            c1 = fgetc(fp1);
+            if (c1 == EOF) {
+                break;
+            }
+            fputc(c1, fp2);
+        }
+        printf("success\n");
+        exit(0);
+    }
+    else {
+        fclose(fp1);
+        fclose(fp2);
+        goto invalid;
+      
     }
     
     

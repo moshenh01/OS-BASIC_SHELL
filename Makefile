@@ -10,10 +10,10 @@ shell: stshell.o
 	$(CC) $(FLAGS) stshell.o -o shell -lreadline
 
 encode: encode.c
-	$(CC) $(FLAGS) -o $@ $^ 
+	$(CC) $(FLAGS) -o encode encode.c 
 
 decode: decode.c
-	$(CC) $(FLAGS) -o $@ $^  
+	$(CC) $(FLAGS) -o decode decode.c  
 
 codecA: codecA.c codecA.h
 	$(CC) $(FLAGS) -shared -fPIC -o codecA codecA.c
